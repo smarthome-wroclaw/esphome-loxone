@@ -30,7 +30,7 @@ external_components:
   - source:
       type: git
       url: https://github.com/smarthome-wroclaw/esphome-loxone
-      ref: v1.4.0
+      ref: v1.6.0
 
 esp32:
   framework:
@@ -144,4 +144,49 @@ level):
 [C][loxone:0xx]:   Listen port: 8888
 [C][loxone:0xx]:   Send buffer length: 64
 [C][loxone:0xx]:   Reachability probe: 192.168.50.124:80 every 30000ms (timeout 4000ms)
+[C][loxone:0xx]:   Config template: http://<device-ip>/loxone/  (ready)
 ```
+
+# Loxone Config templates (optional)
+
+Add a `template:` block and the device serves ready-to-import Loxone Config
+templates from its own web server (needs a `web_server:` component):
+
+| URL | Content |
+| --- | --- |
+| `http://<device-ip>/loxone/` | HTML page: download links, import steps, the `<VirtualOut>` target address filled in with this device's IP, and copy-paste ESPHome lambdas for each command |
+| `http://<device-ip>/loxone/inputs.xml` | `<VirtualInUdp>` template — import under Loxone Config → *Virtual Inputs* → *Import Template* |
+| `http://<device-ip>/loxone/outputs.xml` | `<VirtualOut>` UDP template — import under *Virtual Outputs* → *Import Template* |
+
+```yaml
+loxone:
+  id: loxone1
+  protocol: udp
+  loxone_ip: "192.168.50.124"
+  loxone_port: 9999
+  listen_port: 8888
+
+  template:
+    title: "BoneIO Dimmer"        # optional, defaults to the device name
+    inputs:                       # device -> Loxone  (<VirtualInUdp>)
+      - { command: "IN_01" }                                  # digital, 0/1
+      - { command: "BONEIO_TEMP", analog: true, min: -20, max: 80 }
+    outputs:                      # Loxone -> device  (<VirtualOut>, UDP)
+      - { command: "BUZZER" }                                 # digital, 0/1
+      - { command: "RGBW_L_BRI", analog: true, min: 0, max: 255 }
+```
+
+**The `template:` block is descriptive only — it generates no send/receive
+code.** It turns a list of command names into the XML templates and a matching
+lambda skeleton. You still wire the actual behaviour yourself:
+
+- **device → Loxone**: call `send_string_data("IN_01 " + ...)` from the source
+  entity's `on_state` / `on_value`. The Loxone side recognises `IN_01 <value>`.
+- **Loxone → device**: handle the command in `on_string_data` (Loxone sends
+  `BUZZER 1` / `RGBW_L_BRI <v>`, terminated with the configured `delimiter`).
+
+The `/loxone/` page prints both skeletons pre-filled with your command names.
+
+Per command: `command` (required), `analog` (default `false` → digital 0/1),
+`min` / `max` (analog range, default `0`/`1`). Set the Miniserver's *UDP receive
+port* to match `loxone_port`.
