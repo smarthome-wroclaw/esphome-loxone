@@ -1,16 +1,19 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
-from esphome.components import uart
+from esphome.components.socket import SocketType, consume_sockets
 from esphome.const import (
     CONF_ID,
     CONF_TRIGGER_ID,
 )
 
 DEPENDENCIES = ['network']
-AUTO_LOAD = ['async_tcp']
+AUTO_LOAD = ['async_tcp', 'socket']
 
 CONF_LOXONE_ID = "loxone_id"
+CONF_PROBE_PORT = "probe_port"
+CONF_CHECK_INTERVAL = "check_interval"
+CONF_CHECK_TIMEOUT = "check_timeout"
 
 loxone_ns = cg.esphome_ns.namespace('loxone')
 LoxoneComponent = loxone_ns.class_('LoxoneComponent', cg.PollingComponent)
@@ -30,6 +33,12 @@ CONFIG_SCHEMA = cv.Schema({
     cv.Required("listen_port"): cv.int_range(0, 65535),
     cv.Optional("send_buffer_length", default=20): cv.int_range(0, 1024),
     cv.Optional("delimiter", default="\n"): cv.string,
+    # Reachability probe for the optional `connected` binary sensor: the ESP
+    # opens a short TCP connection to the Miniserver on `probe_port` (its web
+    # UI, 80) every `check_interval`, giving up after `check_timeout`.
+    cv.Optional(CONF_PROBE_PORT, default=80): cv.port,
+    cv.Optional(CONF_CHECK_INTERVAL, default="30s"): cv.positive_time_period_milliseconds,
+    cv.Optional(CONF_CHECK_TIMEOUT, default="4s"): cv.positive_time_period_milliseconds,
     cv.Optional("on_string_data"): automation.validate_automation(
         {
             cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnStringDataTrigger),
@@ -39,7 +48,11 @@ CONFIG_SCHEMA = cv.Schema({
 
 # This component pulls in the Arduino AsyncUDP / AsyncTCP libraries and the
 # legacy `esphome.h` header, so it only builds under the Arduino framework.
-CONFIG_SCHEMA = cv.All(CONFIG_SCHEMA, cv.only_with_arduino)
+CONFIG_SCHEMA = cv.All(
+    CONFIG_SCHEMA,
+    cv.only_with_arduino,
+    consume_sockets(1, "loxone", SocketType.TCP),
+)
 
 def to_code(config):
     # `AsyncUDP` ships bundled with the Arduino ESP32 core. Enable it (and the
@@ -58,6 +71,9 @@ def to_code(config):
     cg.add(var.set_listen_port(config["listen_port"]))
     cg.add(var.set_send_buffer_length(config["send_buffer_length"]))
     cg.add(var.set_delimiter(config["delimiter"]))
+    cg.add(var.set_probe_port(config[CONF_PROBE_PORT]))
+    cg.add(var.set_check_interval(config[CONF_CHECK_INTERVAL].total_milliseconds))
+    cg.add(var.set_check_timeout(config[CONF_CHECK_TIMEOUT].total_milliseconds))
     yield cg.register_component(var, config)
 
     for conf in config.get("on_string_data", []):

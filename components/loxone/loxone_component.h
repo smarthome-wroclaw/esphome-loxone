@@ -3,11 +3,20 @@
 #include <string>
 #include <queue>
 
+#include <memory>
+
 #include "esphome.h"
 #include "esphome/core/component.h"
 #include "esphome/core/defines.h"
+#include "esphome/components/socket/socket.h"
 #ifdef USE_TEXT_SENSOR
 #include "esphome/components/text_sensor/text_sensor.h"
+#endif
+#ifdef USE_BINARY_SENSOR
+#include "esphome/components/binary_sensor/binary_sensor.h"
+#endif
+#ifdef USE_SENSOR
+#include "esphome/components/sensor/sensor.h"
 #endif
 #include "AsyncUDP.h"
 #include "AsyncTCP.h"
@@ -24,7 +33,23 @@ namespace esphome {
       void setup() override;
       void dump_config() override;
       void update() override;
+      void loop() override;
       void send_string_data(std::string data);
+
+      void set_probe_port(uint16_t port) { this->probe_port_ = port; };
+      void set_check_interval(uint32_t ms) { this->check_interval_ms_ = ms; };
+      void set_check_timeout(uint32_t ms) { this->check_timeout_ms_ = ms; };
+
+#ifdef USE_BINARY_SENSOR
+      void set_connected_binary_sensor(binary_sensor::BinarySensor *s) {
+        this->connected_binary_sensor_ = s;
+      };
+#endif
+#ifdef USE_SENSOR
+      void set_last_message_age_sensor(sensor::Sensor *s) {
+        this->last_message_age_sensor_ = s;
+      };
+#endif
 
 #ifdef USE_TEXT_SENSOR
       void set_miniserver_ip_text_sensor(text_sensor::TextSensor *s) {
@@ -35,6 +60,9 @@ namespace esphome {
       };
       void set_listen_port_text_sensor(text_sensor::TextSensor *s) {
         this->listen_port_text_sensor_ = s;
+      };
+      void set_last_message_text_sensor(text_sensor::TextSensor *s) {
+        this->last_message_text_sensor_ = s;
       };
 #endif
       void set_protocol(std::string protocol) {
@@ -75,10 +103,37 @@ namespace esphome {
       std::queue<std::string> send_string_buffer_{};
       bool server_ready_ = false;
       bool client_ready_ = false;
+
+      // Inbound-traffic liveness tracking
+      uint32_t last_rx_ms_{0};
+      bool have_rx_{false};
+      void note_rx_();
 #ifdef USE_TEXT_SENSOR
       text_sensor::TextSensor *miniserver_ip_text_sensor_{nullptr};
       text_sensor::TextSensor *miniserver_port_text_sensor_{nullptr};
       text_sensor::TextSensor *listen_port_text_sensor_{nullptr};
+      text_sensor::TextSensor *last_message_text_sensor_{nullptr};
+#endif
+#ifdef USE_SENSOR
+      sensor::Sensor *last_message_age_sensor_{nullptr};
+#endif
+
+      // TCP reachability probe (non-blocking) for the `connected` binary sensor
+      uint16_t probe_port_{80};
+      uint32_t check_interval_ms_{30000};
+      uint32_t check_timeout_ms_{4000};
+#ifdef USE_BINARY_SENSOR
+      binary_sensor::BinarySensor *connected_binary_sensor_{nullptr};
+      enum ProbeState { PROBE_IDLE, PROBE_CONNECTING };
+      ProbeState probe_state_{PROBE_IDLE};
+      std::unique_ptr<socket::Socket> probe_socket_;
+      struct sockaddr_storage probe_addr_;
+      socklen_t probe_addrlen_{0};
+      uint32_t probe_started_ms_{0};
+      uint32_t next_probe_ms_{0};
+      void probe_loop_();
+      void probe_start_();
+      void probe_finish_(bool reachable);
 #endif
 
       void ensure_listen_udp();
