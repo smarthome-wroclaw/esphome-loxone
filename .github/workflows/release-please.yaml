@@ -12,6 +12,25 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - id: release
+        uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      # When release-please cuts a release, attach the component as a zip.
+      # Done here rather than in a separate `on: release` workflow because
+      # releases created with the default GITHUB_TOKEN do not trigger further
+      # workflow runs.
+      - uses: actions/checkout@v4
+        if: ${{ steps.release.outputs.release_created }}
+
+      - name: Build and upload component zip
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          cd components
+          zip -r ../loxone.zip ./
+          cd ..
+          gh release upload "$TAG" loxone.zip --clobber
