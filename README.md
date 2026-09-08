@@ -1,4 +1,13 @@
 # Loxone Component
+
+ESPHome external component for exchanging newline-delimited string commands with
+a Loxone Miniserver over UDP or TCP.
+
+This is a fork of [hzkincony/esphome-loxone](https://github.com/hzkincony/esphome-loxone)
+with a compatibility fix for ESPHome 2026.x. Releases are cut with
+[release-please](https://github.com/googleapis/release-please); pin a tag from
+the [releases page](https://github.com/smarthome-wroclaw/esphome-loxone/releases).
+
 more information, you can check with KinCony's webpage: https://www.kincony.com
 
 # Requirements
@@ -20,8 +29,8 @@ failure.
 external_components:
   - source:
       type: git
-      url: https://github.com/hzkincony/esphome-loxone
-      ref: v1.2.2
+      url: https://github.com/smarthome-wroclaw/esphome-loxone
+      ref: v1.3.0
 
 esp32:
   framework:
