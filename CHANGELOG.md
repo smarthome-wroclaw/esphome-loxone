@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.5.0...v1.6.0) (2026-09-08)
+
+
+### Features
+
+* /loxone/ endpoint serving importable Loxone Config templates ([#13](https://github.com/smarthome-wroclaw/esphome-loxone/issues/13)) ([bb98796](https://github.com/smarthome-wroclaw/esphome-loxone/commit/bb9879658ddb75776f1bf57236ec14e750213872))
+
 ## [1.5.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.4.0...v1.5.0) (2026-09-08)
 
 
