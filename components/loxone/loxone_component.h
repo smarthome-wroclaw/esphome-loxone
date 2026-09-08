@@ -5,6 +5,10 @@
 
 #include "esphome.h"
 #include "esphome/core/component.h"
+#include "esphome/core/defines.h"
+#ifdef USE_TEXT_SENSOR
+#include "esphome/components/text_sensor/text_sensor.h"
+#endif
 #include "AsyncUDP.h"
 #include "AsyncTCP.h"
 
@@ -18,8 +22,21 @@ namespace esphome {
     public:
       LoxoneComponent() : PollingComponent(5000) {};
       void setup() override;
+      void dump_config() override;
       void update() override;
       void send_string_data(std::string data);
+
+#ifdef USE_TEXT_SENSOR
+      void set_miniserver_ip_text_sensor(text_sensor::TextSensor *s) {
+        this->miniserver_ip_text_sensor_ = s;
+      };
+      void set_miniserver_port_text_sensor(text_sensor::TextSensor *s) {
+        this->miniserver_port_text_sensor_ = s;
+      };
+      void set_listen_port_text_sensor(text_sensor::TextSensor *s) {
+        this->listen_port_text_sensor_ = s;
+      };
+#endif
       void set_protocol(std::string protocol) {
         this->protocol_ = protocol;
       };
@@ -58,6 +75,11 @@ namespace esphome {
       std::queue<std::string> send_string_buffer_{};
       bool server_ready_ = false;
       bool client_ready_ = false;
+#ifdef USE_TEXT_SENSOR
+      text_sensor::TextSensor *miniserver_ip_text_sensor_{nullptr};
+      text_sensor::TextSensor *miniserver_port_text_sensor_{nullptr};
+      text_sensor::TextSensor *listen_port_text_sensor_{nullptr};
+#endif
 
       void ensure_listen_udp();
       void ensure_listen_tcp();
