@@ -1,6 +1,20 @@
 # Loxone Component
 more information, you can check with KinCony's webpage: https://www.kincony.com
 
+# Requirements
+
+This component uses the Arduino `AsyncUDP` / `AsyncTCP` libraries, so it only
+builds under the **Arduino** framework:
+
+```yaml
+esp32:
+  framework:
+    type: arduino
+```
+
+Under `esp-idf` the config is rejected with a clear message instead of a build
+failure.
+
 # Core Yaml
 ```yaml
 external_components:
@@ -8,6 +22,10 @@ external_components:
       type: git
       url: https://github.com/hzkincony/esphome-loxone
       ref: v1.2.2
+
+esp32:
+  framework:
+    type: arduino
 
 switch:
   - platform: gpio
