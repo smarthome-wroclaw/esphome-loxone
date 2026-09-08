@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.3.0...v1.3.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* do not call AsyncClient::remoteIP() (fails to link) ([#7](https://github.com/smarthome-wroclaw/esphome-loxone/issues/7)) ([551b35c](https://github.com/smarthome-wroclaw/esphome-loxone/commit/551b35ce8c984dd06c29f0cbb3072c20cf6cf456))
+
 ## [1.3.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.2.2...v1.3.0) (2026-09-08)
 
 First release of the [smarthome-wroclaw](https://github.com/smarthome-wroclaw/esphome-loxone)
