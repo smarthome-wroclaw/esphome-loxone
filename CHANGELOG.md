@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.3.1...v1.4.0) (2026-09-08)
+
+
+### Features
+
+* dump_config + optional config text sensors ([#9](https://github.com/smarthome-wroclaw/esphome-loxone/issues/9)) ([a0da486](https://github.com/smarthome-wroclaw/esphome-loxone/commit/a0da4865055f51bfca8cec4e90976e3acc8791d2))
+
 ## [1.3.1](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.3.0...v1.3.1) (2026-09-08)
 
 
