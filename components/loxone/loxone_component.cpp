@@ -21,6 +21,16 @@ namespace esphome {
         this->listen_port_text_sensor_->publish_state(std::to_string(this->listen_port_));
       }
 #endif
+
+#if defined(USE_NETWORK) && !defined(USE_ZEPHYR)
+      if (this->template_handler_ != nullptr) {
+        if (web_server_base::global_web_server_base != nullptr) {
+          web_server_base::global_web_server_base->add_handler(this->template_handler_);
+        } else {
+          ESP_LOGW(TAG, "Loxone template endpoint needs a `web_server:` component");
+        }
+      }
+#endif
     }
 
     void LoxoneComponent::dump_config() {
@@ -34,6 +44,14 @@ namespace esphome {
         ESP_LOGCONFIG(TAG, "  Reachability probe: %s:%u every %ums (timeout %ums)",
                       this->loxone_ip_.c_str(), this->probe_port_,
                       (unsigned) this->check_interval_ms_, (unsigned) this->check_timeout_ms_);
+      }
+#endif
+#if defined(USE_NETWORK) && !defined(USE_ZEPHYR)
+      if (this->template_handler_ != nullptr) {
+        bool served = web_server_base::global_web_server_base != nullptr &&
+                      web_server_base::global_web_server_base->get_server() != nullptr;
+        ESP_LOGCONFIG(TAG, "  Config template: http://<device-ip>/loxone/  (%s)",
+                      served ? "ready" : "needs web_server:");
       }
 #endif
     }

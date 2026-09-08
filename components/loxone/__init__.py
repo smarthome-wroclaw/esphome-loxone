@@ -6,9 +6,10 @@ from esphome.const import (
     CONF_ID,
     CONF_TRIGGER_ID,
 )
+from .loxone_template import CONF_TEMPLATE, TEMPLATE_SCHEMA, add_template_code
 
 DEPENDENCIES = ['network']
-AUTO_LOAD = ['async_tcp', 'socket']
+AUTO_LOAD = ['async_tcp', 'socket', 'web_server_base']
 
 CONF_LOXONE_ID = "loxone_id"
 CONF_PROBE_PORT = "probe_port"
@@ -44,6 +45,10 @@ CONFIG_SCHEMA = cv.Schema({
             cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnStringDataTrigger),
         }
     ),
+    # Optional: serve importable Loxone Config templates at GET /loxone/
+    # (needs a `web_server:` component). Describes commands only - generates
+    # no send/receive code.
+    cv.Optional(CONF_TEMPLATE): TEMPLATE_SCHEMA,
 }).extend(cv.COMPONENT_SCHEMA)
 
 # This component pulls in the Arduino AsyncUDP / AsyncTCP libraries and the
@@ -75,6 +80,9 @@ def to_code(config):
     cg.add(var.set_check_interval(config[CONF_CHECK_INTERVAL].total_milliseconds))
     cg.add(var.set_check_timeout(config[CONF_CHECK_TIMEOUT].total_milliseconds))
     yield cg.register_component(var, config)
+
+    if CONF_TEMPLATE in config:
+        add_template_code(config, var)
 
     for conf in config.get("on_string_data", []):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)

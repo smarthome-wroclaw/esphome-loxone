@@ -9,6 +9,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/defines.h"
 #include "esphome/components/socket/socket.h"
+#include "loxone_web.h"
 #ifdef USE_TEXT_SENSOR
 #include "esphome/components/text_sensor/text_sensor.h"
 #endif
@@ -87,6 +88,15 @@ namespace esphome {
       void add_string_trigger(OnStringDataTrigger *trigger) {
         this->string_triggers_.push_back(trigger);
       };
+
+#if defined(USE_NETWORK) && !defined(USE_ZEPHYR)
+      // Enable the /loxone/ config-template endpoint. Bodies are rendered at
+      // codegen time from the `template:` block.
+      void set_loxone_template(const std::string &index_html, const std::string &inputs_xml,
+                               const std::string &outputs_xml) {
+        this->template_handler_ = new LoxoneTemplateHandler(index_html, inputs_xml, outputs_xml);
+      };
+#endif
     protected:
       std::vector<OnStringDataTrigger *> string_triggers_{};
       std::string protocol_;
@@ -134,6 +144,10 @@ namespace esphome {
       void probe_loop_();
       void probe_start_();
       void probe_finish_(bool reachable);
+#endif
+
+#if defined(USE_NETWORK) && !defined(USE_ZEPHYR)
+      LoxoneTemplateHandler *template_handler_{nullptr};
 #endif
 
       void ensure_listen_udp();
