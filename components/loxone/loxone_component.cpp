@@ -3,7 +3,25 @@
 namespace esphome {
   namespace loxone {
     void LoxoneComponent::setup() {
+#ifdef USE_TEXT_SENSOR
+      if (this->miniserver_ip_text_sensor_ != nullptr) {
+        this->miniserver_ip_text_sensor_->publish_state(this->loxone_ip_);
+      }
+      if (this->miniserver_port_text_sensor_ != nullptr) {
+        this->miniserver_port_text_sensor_->publish_state(std::to_string(this->loxone_port_));
+      }
+      if (this->listen_port_text_sensor_ != nullptr) {
+        this->listen_port_text_sensor_->publish_state(std::to_string(this->listen_port_));
+      }
+#endif
+    }
 
+    void LoxoneComponent::dump_config() {
+      ESP_LOGCONFIG(TAG, "Loxone:");
+      ESP_LOGCONFIG(TAG, "  Protocol: %s", this->protocol_.c_str());
+      ESP_LOGCONFIG(TAG, "  Miniserver: %s:%u", this->loxone_ip_.c_str(), this->loxone_port_);
+      ESP_LOGCONFIG(TAG, "  Listen port: %u", this->listen_port_);
+      ESP_LOGCONFIG(TAG, "  Send buffer length: %u", this->send_buffer_length_);
     }
 
     void LoxoneComponent::ensure_listen_udp() {

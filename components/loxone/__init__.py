@@ -10,6 +10,8 @@ from esphome.const import (
 DEPENDENCIES = ['network']
 AUTO_LOAD = ['async_tcp']
 
+CONF_LOXONE_ID = "loxone_id"
+
 loxone_ns = cg.esphome_ns.namespace('loxone')
 LoxoneComponent = loxone_ns.class_('LoxoneComponent', cg.PollingComponent)
 OnStringDataTrigger = loxone_ns.class_("OnStringDataTrigger",

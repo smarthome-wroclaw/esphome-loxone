@@ -30,7 +30,7 @@ external_components:
   - source:
       type: git
       url: https://github.com/smarthome-wroclaw/esphome-loxone
-      ref: v1.3.0
+      ref: v1.3.1
 
 esp32:
   framework:
@@ -82,4 +82,35 @@ loxone:
         } else if (data == "RELAY-SET-255,1,0") {
           id(loxone_switch_1).turn_off();
         }
+```
+
+# Config text sensors (optional)
+
+The `loxone:` block itself creates no entities. To surface the connection
+settings in the ESPHome web UI / Home Assistant (they show under **Configuration**),
+add the `text_sensor` platform:
+
+```yaml
+text_sensor:
+  - platform: loxone
+    loxone_id: loxone1          # optional, only if you have more than one `loxone:`
+    miniserver_ip:
+      name: "Miniserver IP"
+    miniserver_port:
+      name: "Miniserver UDP Port"
+    listen_port:
+      name: "Listen Port"
+```
+
+All three keys are optional. Values are published once at boot.
+
+The component also logs its configuration at boot (`[loxone]` at the default log
+level):
+
+```
+[C][loxone:0xx]: Loxone:
+[C][loxone:0xx]:   Protocol: udp
+[C][loxone:0xx]:   Miniserver: 192.168.50.124:9999
+[C][loxone:0xx]:   Listen port: 8888
+[C][loxone:0xx]:   Send buffer length: 64
 ```
