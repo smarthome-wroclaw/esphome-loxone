@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.4.0...v1.5.0) (2026-09-08)
+
+
+### Features
+
+* connection status entities (connected / last_message / last_message_age) ([#11](https://github.com/smarthome-wroclaw/esphome-loxone/issues/11)) ([1023fd3](https://github.com/smarthome-wroclaw/esphome-loxone/commit/1023fd31ae72ecc6adf85333fd513e38f6ed310b))
+
 ## [1.4.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.3.1...v1.4.0) (2026-09-08)
 
 
