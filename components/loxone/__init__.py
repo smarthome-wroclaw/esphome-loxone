@@ -35,8 +35,19 @@ CONFIG_SCHEMA = cv.Schema({
     ),
 }).extend(cv.COMPONENT_SCHEMA)
 
+# This component pulls in the Arduino AsyncUDP / AsyncTCP libraries and the
+# legacy `esphome.h` header, so it only builds under the Arduino framework.
+CONFIG_SCHEMA = cv.All(CONFIG_SCHEMA, cv.only_with_arduino)
+
 def to_code(config):
-    cg.add_library("ESP32 Async UDP", None)
+    # `AsyncUDP` ships bundled with the Arduino ESP32 core. Enable it (and the
+    # `Network` library it depends on in Arduino's Kconfig - it must come first,
+    # otherwise CONFIG_ARDUINO_SELECTIVE_AsyncUDP is dropped on regeneration)
+    # via ESPHome's selective-compilation names. The old "ESP32 Async UDP"
+    # Arduino-IDE name is not a PlatformIO package and makes ESPHome 2026's
+    # library resolver abort with UnknownPackageError.
+    cg.add_library("Network", None)
+    cg.add_library("AsyncUDP", None)
     #cg.add_library("esphome/AsyncTCP-esphome", "2.0.1")
     var = cg.new_Pvariable(config[CONF_ID])
     cg.add(var.set_protocol(config["protocol"]))
