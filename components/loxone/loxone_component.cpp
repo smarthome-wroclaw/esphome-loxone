@@ -38,10 +38,12 @@ namespace esphome {
 
       tcp_server_ = new AsyncServer(listen_port_);
       tcp_server_->onClient([this](void* arg, AsyncClient *client) {
-        ESP_LOGD(TAG, "new client has been connected to server, ip: %s",
-                 client->remoteIP().toString().c_str());
+        // Note: AsyncClient::remoteIP() is compiled only when the AsyncTCP
+        // library sees `ARDUINO` defined, which is not the case for the
+        // managed component ESPHome pulls in - calling it fails to link.
+        ESP_LOGD(TAG, "new client has been connected to server");
         client->onData([this](void* arg, AsyncClient *client, void *data, size_t len) {
-          ESP_LOGD(TAG, "receive data, length=%d, data=%s", len, data);
+          ESP_LOGD(TAG, "receive data, length=%d, data=%s", len, (char *) data);
           receive_string_buffer_.append((char*)data, len);
           ESP_LOGD(TAG, "current buffer data=%s", receive_string_buffer_.c_str());
           fire_triggers();
