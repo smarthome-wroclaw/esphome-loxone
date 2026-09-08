@@ -30,7 +30,7 @@ external_components:
   - source:
       type: git
       url: https://github.com/smarthome-wroclaw/esphome-loxone
-      ref: v1.3.1
+      ref: v1.4.0
 
 esp32:
   framework:
@@ -84,11 +84,11 @@ loxone:
         }
 ```
 
-# Config text sensors (optional)
+# Status & config entities (optional)
 
-The `loxone:` block itself creates no entities. To surface the connection
-settings in the ESPHome web UI / Home Assistant (they show under **Configuration**),
-add the `text_sensor` platform:
+The `loxone:` block itself creates no entities. Add any of the `text_sensor`,
+`binary_sensor` and `sensor` platforms to see what's going on from the ESPHome
+web UI / Home Assistant:
 
 ```yaml
 text_sensor:
@@ -100,9 +100,39 @@ text_sensor:
       name: "Miniserver UDP Port"
     listen_port:
       name: "Listen Port"
+    last_message:                # last complete command received from Loxone
+      name: "Loxone Last Message"
+
+binary_sensor:
+  - platform: loxone
+    connected:                   # device_class: connectivity (green/red dot)
+      name: "Loxone Connected"
+
+sensor:
+  - platform: loxone
+    last_message_age:            # seconds since the last inbound packet
+      name: "Loxone Last Message Age"
 ```
 
-All three keys are optional. Values are published once at boot.
+All keys are optional. `miniserver_ip` / `miniserver_port` / `listen_port` are
+static config values (published once at boot, `entity_category: config`).
+
+**`connected`** — because Loxone UDP is connectionless, "is the Miniserver
+there?" cannot be answered from the UDP socket. Instead the ESP opens a short
+TCP connection to the Miniserver's web UI (`probe_port`, default `80`) every
+`check_interval` (default `30s`, giving up after `check_timeout`, default `4s`).
+Success → on. It confirms the Miniserver is powered on and on the network; it
+does **not** prove the UDP path — pair it with `last_message_age` for that.
+
+Probe tuning goes on the `loxone:` block:
+
+```yaml
+loxone:
+  # ...
+  probe_port: 80
+  check_interval: 30s
+  check_timeout: 4s
+```
 
 The component also logs its configuration at boot (`[loxone]` at the default log
 level):
@@ -113,4 +143,5 @@ level):
 [C][loxone:0xx]:   Miniserver: 192.168.50.124:9999
 [C][loxone:0xx]:   Listen port: 8888
 [C][loxone:0xx]:   Send buffer length: 64
+[C][loxone:0xx]:   Reachability probe: 192.168.50.124:80 every 30000ms (timeout 4000ms)
 ```

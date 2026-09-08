@@ -1,8 +1,15 @@
 #include "loxone_component.h"
 
+#include <cerrno>
+#include <cmath>
+
 namespace esphome {
   namespace loxone {
     void LoxoneComponent::setup() {
+#ifdef USE_BINARY_SENSOR
+      // let the network come up before the first reachability probe
+      this->next_probe_ms_ = millis() + 3000;
+#endif
 #ifdef USE_TEXT_SENSOR
       if (this->miniserver_ip_text_sensor_ != nullptr) {
         this->miniserver_ip_text_sensor_->publish_state(this->loxone_ip_);
@@ -22,7 +29,100 @@ namespace esphome {
       ESP_LOGCONFIG(TAG, "  Miniserver: %s:%u", this->loxone_ip_.c_str(), this->loxone_port_);
       ESP_LOGCONFIG(TAG, "  Listen port: %u", this->listen_port_);
       ESP_LOGCONFIG(TAG, "  Send buffer length: %u", this->send_buffer_length_);
+#ifdef USE_BINARY_SENSOR
+      if (this->connected_binary_sensor_ != nullptr) {
+        ESP_LOGCONFIG(TAG, "  Reachability probe: %s:%u every %ums (timeout %ums)",
+                      this->loxone_ip_.c_str(), this->probe_port_,
+                      (unsigned) this->check_interval_ms_, (unsigned) this->check_timeout_ms_);
+      }
+#endif
     }
+
+    void LoxoneComponent::note_rx_() {
+      this->last_rx_ms_ = millis();
+      this->have_rx_ = true;
+    }
+
+    void LoxoneComponent::loop() {
+#ifdef USE_BINARY_SENSOR
+      if (this->connected_binary_sensor_ != nullptr) {
+        this->probe_loop_();
+      }
+#endif
+    }
+
+#ifdef USE_BINARY_SENSOR
+    void LoxoneComponent::probe_loop_() {
+      const uint32_t now = millis();
+      switch (this->probe_state_) {
+        case PROBE_IDLE:
+          if ((int32_t) (now - this->next_probe_ms_) >= 0 && network::is_connected()) {
+            this->probe_start_();
+          }
+          break;
+        case PROBE_CONNECTING: {
+          // Poll the non-blocking connect by re-calling connect(): lwIP returns
+          // EISCONN once the handshake is done, EALREADY while still pending,
+          // or the real error (ECONNREFUSED / EHOSTUNREACH / ...).
+          int err = this->probe_socket_->connect((struct sockaddr *) &this->probe_addr_,
+                                                 this->probe_addrlen_);
+          if (err == 0 || errno == EISCONN) {
+            this->probe_finish_(true);
+          } else if (errno == EALREADY || errno == EINPROGRESS ||
+                     errno == EWOULDBLOCK || errno == EAGAIN) {
+            if ((int32_t) (now - this->probe_started_ms_) >= (int32_t) this->check_timeout_ms_) {
+              this->probe_finish_(false);
+            }
+          } else {
+            this->probe_finish_(false);
+          }
+          break;
+        }
+      }
+    }
+
+    void LoxoneComponent::probe_start_() {
+      this->probe_socket_ = socket::socket_ip(SOCK_STREAM, IPPROTO_TCP);
+      if (this->probe_socket_ == nullptr) {
+        ESP_LOGW(TAG, "probe: could not allocate socket");
+        this->probe_finish_(false);
+        return;
+      }
+      this->probe_socket_->setblocking(false);
+      this->probe_addrlen_ = socket::set_sockaddr((struct sockaddr *) &this->probe_addr_,
+                                                  sizeof(this->probe_addr_),
+                                                  this->loxone_ip_, this->probe_port_);
+      if (this->probe_addrlen_ == 0) {
+        ESP_LOGW(TAG, "probe: invalid miniserver ip '%s'", this->loxone_ip_.c_str());
+        this->probe_finish_(false);
+        return;
+      }
+      int err = this->probe_socket_->connect((struct sockaddr *) &this->probe_addr_,
+                                             this->probe_addrlen_);
+      if (err == 0) {
+        this->probe_finish_(true);
+        return;
+      }
+      if (errno != EINPROGRESS && errno != EALREADY && errno != EWOULDBLOCK && errno != EAGAIN) {
+        this->probe_finish_(false);
+        return;
+      }
+      this->probe_started_ms_ = millis();
+      this->probe_state_ = PROBE_CONNECTING;
+    }
+
+    void LoxoneComponent::probe_finish_(bool reachable) {
+      if (this->probe_socket_ != nullptr) {
+        this->probe_socket_->close();
+        this->probe_socket_ = nullptr;
+      }
+      this->probe_state_ = PROBE_IDLE;
+      this->next_probe_ms_ = millis() + this->check_interval_ms_;
+      if (this->connected_binary_sensor_ != nullptr) {
+        this->connected_binary_sensor_->publish_state(reachable);
+      }
+    }
+#endif
 
     void LoxoneComponent::ensure_listen_udp() {
       if (protocol_ != "udp") {
@@ -37,6 +137,7 @@ namespace esphome {
         server_ready_ = true;
         ESP_LOGD(TAG, "listened");
         udp_server_.onPacket([this](AsyncUDPPacket packet) {
+          this->note_rx_();
           ESP_LOGD(TAG, "receive data, length=%d, data=%s", packet.length(), packet.data());
           receive_string_buffer_.append((char*)packet.data(), packet.length());
           ESP_LOGD(TAG, "current buffer data=%s", receive_string_buffer_.c_str());
@@ -61,6 +162,7 @@ namespace esphome {
         // managed component ESPHome pulls in - calling it fails to link.
         ESP_LOGD(TAG, "new client has been connected to server");
         client->onData([this](void* arg, AsyncClient *client, void *data, size_t len) {
+          this->note_rx_();
           ESP_LOGD(TAG, "receive data, length=%d, data=%s", len, (char *) data);
           receive_string_buffer_.append((char*)data, len);
           ESP_LOGD(TAG, "current buffer data=%s", receive_string_buffer_.c_str());
@@ -86,6 +188,11 @@ namespace esphome {
 
         // 对每一个完整的指令调用 triggers_ 的 trigger 方法
         if (!command.empty()) {
+#ifdef USE_TEXT_SENSOR
+          if (this->last_message_text_sensor_ != nullptr) {
+            this->last_message_text_sensor_->publish_state(command);
+          }
+#endif
           // 假设 triggers_ 是一个能够响应字符串指令的对象
           for (auto& trigger : string_triggers_) {
             trigger->trigger(command);
@@ -154,6 +261,13 @@ namespace esphome {
     }
 
     void LoxoneComponent::update() {
+#ifdef USE_SENSOR
+      if (this->last_message_age_sensor_ != nullptr) {
+        float age = this->have_rx_ ? (millis() - this->last_rx_ms_) / 1000.0f : NAN;
+        this->last_message_age_sensor_->publish_state(age);
+      }
+#endif
+
       if (!network::is_connected()) {
         ESP_LOGD(TAG, "network not ready");
         return;
