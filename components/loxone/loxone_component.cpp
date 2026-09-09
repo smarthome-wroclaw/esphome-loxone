@@ -39,6 +39,7 @@ namespace esphome {
       ESP_LOGCONFIG(TAG, "  Miniserver: %s:%u", this->loxone_ip_.c_str(), this->loxone_port_);
       ESP_LOGCONFIG(TAG, "  Listen port: %u", this->listen_port_);
       ESP_LOGCONFIG(TAG, "  Send buffer length: %u", this->send_buffer_length_);
+      ESP_LOGCONFIG(TAG, "  For TX/RX traffic: logger -> logs: {loxone: DEBUG}");
 #ifdef USE_BINARY_SENSOR
       if (this->connected_binary_sensor_ != nullptr) {
         ESP_LOGCONFIG(TAG, "  Reachability probe: %s:%u every %ums (timeout %ums)",
@@ -59,6 +60,32 @@ namespace esphome {
     void LoxoneComponent::note_rx_() {
       this->last_rx_ms_ = millis();
       this->have_rx_ = true;
+    }
+
+    void LoxoneComponent::log_tx_(const std::string &data) {
+      this->tx_count_++;
+      ESP_LOGD(TAG, "TX -> %s:%u  \"%s\"", this->loxone_ip_.c_str(), this->loxone_port_, data.c_str());
+    }
+
+    void LoxoneComponent::log_rx_(const char *transport, const void *data, size_t len) {
+      this->note_rx_();
+      this->rx_packet_count_++;
+      ESP_LOGD(TAG, "RX <- %s %u B  \"%.*s\"", transport, (unsigned) len, (int) len, (const char *) data);
+    }
+
+    void LoxoneComponent::set_client_ready_(bool ready) {
+      this->client_ready_ = ready;
+      int8_t want = ready ? 1 : 0;
+      if (this->client_ready_state_ == want) {
+        return;
+      }
+      if (ready) {
+        ESP_LOGI(TAG, "client connected (%s %s:%u)", this->protocol_.c_str(), this->loxone_ip_.c_str(),
+                 this->loxone_port_);
+      } else if (this->client_ready_state_ == 1) {
+        ESP_LOGI(TAG, "client disconnected");
+      }
+      this->client_ready_state_ = want;
     }
 
     void LoxoneComponent::loop() {
@@ -153,12 +180,11 @@ namespace esphome {
 
       if (udp_server_.listen(listen_port_)) {
         server_ready_ = true;
-        ESP_LOGD(TAG, "listened");
+        ESP_LOGD(TAG, "listening for Loxone on udp/%u", listen_port_);
         udp_server_.onPacket([this](AsyncUDPPacket packet) {
-          this->note_rx_();
-          ESP_LOGD(TAG, "receive data, length=%d, data=%s", packet.length(), packet.data());
+          this->log_rx_("udp", packet.data(), packet.length());
           receive_string_buffer_.append((char*)packet.data(), packet.length());
-          ESP_LOGD(TAG, "current buffer data=%s", receive_string_buffer_.c_str());
+          ESP_LOGV(TAG, "rx buffer: \"%s\"", receive_string_buffer_.c_str());
           fire_triggers();
         });
       }
@@ -178,18 +204,17 @@ namespace esphome {
         // Note: AsyncClient::remoteIP() is compiled only when the AsyncTCP
         // library sees `ARDUINO` defined, which is not the case for the
         // managed component ESPHome pulls in - calling it fails to link.
-        ESP_LOGD(TAG, "new client has been connected to server");
+        ESP_LOGD(TAG, "Loxone opened a tcp connection");
         client->onData([this](void* arg, AsyncClient *client, void *data, size_t len) {
-          this->note_rx_();
-          ESP_LOGD(TAG, "receive data, length=%d, data=%s", len, (char *) data);
+          this->log_rx_("tcp", data, len);
           receive_string_buffer_.append((char*)data, len);
-          ESP_LOGD(TAG, "current buffer data=%s", receive_string_buffer_.c_str());
+          ESP_LOGV(TAG, "rx buffer: \"%s\"", receive_string_buffer_.c_str());
           fire_triggers();
         }, nullptr);
       }, nullptr);
       tcp_server_->begin();
       server_ready_ = true;
-      ESP_LOGD(TAG, "listened");
+      ESP_LOGD(TAG, "listening for Loxone on tcp/%u", listen_port_);
     }
 
     void LoxoneComponent::fire_triggers() {
@@ -206,6 +231,8 @@ namespace esphome {
 
         // 对每一个完整的指令调用 triggers_ 的 trigger 方法
         if (!command.empty()) {
+          this->rx_cmd_count_++;
+          ESP_LOGD(TAG, "RX cmd \"%s\"", command.c_str());
 #ifdef USE_TEXT_SENSOR
           if (this->last_message_text_sensor_ != nullptr) {
             this->last_message_text_sensor_->publish_state(command);
@@ -224,19 +251,10 @@ namespace esphome {
         return;
       }
 
-      if (tcp_client_.connected()) {
-        if (client_ready_ == false) {
-          ESP_LOGD(TAG, "client connected");
-        }
-        client_ready_ = true;
-
-      } else {
-        client_ready_ = false;
-        ESP_LOGD(TAG, "client not connected");
-      }
+      this->set_client_ready_(tcp_client_.connected());
 
       if (tcp_client_.connecting()) {
-        ESP_LOGD(TAG, "client still connecting");
+        ESP_LOGV(TAG, "client still connecting");
         return;
       }
 
@@ -245,7 +263,7 @@ namespace esphome {
       }
 
       if (tcp_client_.connect(loxone_ip_.c_str(), loxone_port_)) {
-        ESP_LOGD(TAG, "client connecting...");
+        ESP_LOGV(TAG, "client connecting...");
       } else {
         ESP_LOGD(TAG, "client connect failed");
       }
@@ -256,22 +274,13 @@ namespace esphome {
         return;
       }
 
-      if (udp_client_.connected()) {
-        if (client_ready_ == false) {
-          ESP_LOGD(TAG, "client connected");
-        }
-
-        client_ready_ = true;
-      } else {
-        client_ready_ = false;
-        ESP_LOGD(TAG, "client not connected");
-      }
+      this->set_client_ready_(udp_client_.connected());
 
       if (!client_ready_) {
         ip_addr_t addr;
         ipaddr_aton(loxone_ip_.c_str(), &addr);
         if (udp_client_.connect(&addr, loxone_port_)) {
-          ESP_LOGD(TAG, "client connecting...");
+          ESP_LOGV(TAG, "client connecting...");
         } else {
           ESP_LOGD(TAG, "client connect failed");
         }
@@ -286,8 +295,10 @@ namespace esphome {
       }
 #endif
 
+      this->log_stats_();
+
       if (!network::is_connected()) {
-        ESP_LOGD(TAG, "network not ready");
+        ESP_LOGV(TAG, "network not ready");
         return;
       }
 
@@ -302,12 +313,12 @@ namespace esphome {
           if (protocol_ == "udp") {
             udp_client_.print(d.c_str());
             udp_client_.print(delimiter_.c_str());
-            ESP_LOGD(TAG, "pop from queue, string data: %s", d.c_str());
+            this->log_tx_(d);
           } else if (protocol_ == "tcp") {
             tcp_client_.add(d.c_str(), strlen(d.c_str()));
             tcp_client_.add(delimiter_.c_str(), strlen(delimiter_.c_str()));
             tcp_client_.send();
-            ESP_LOGD(TAG, "pop from queue, string data: %s", d.c_str());
+            this->log_tx_(d);
           }
 
           send_string_buffer_.pop();
@@ -315,15 +326,37 @@ namespace esphome {
       }
     }
 
+    void LoxoneComponent::log_stats_() {
+      const uint32_t now = millis();
+      if (now - this->last_heartbeat_ms_ < 60000) {
+        return;
+      }
+      this->last_heartbeat_ms_ = now;
+      const uint32_t activity = this->tx_count_ + this->rx_packet_count_;
+      if (activity == this->last_heartbeat_activity_) {
+        return;  // nothing happened since the last heartbeat - stay quiet
+      }
+      this->last_heartbeat_activity_ = activity;
+      if (this->have_rx_) {
+        ESP_LOGI(TAG, "stats: tx=%u rx=%u cmd=%u last_rx=%us connected=%s", (unsigned) this->tx_count_,
+                 (unsigned) this->rx_packet_count_, (unsigned) this->rx_cmd_count_,
+                 (unsigned) ((now - this->last_rx_ms_) / 1000), this->client_ready_ ? "yes" : "no");
+      } else {
+        ESP_LOGI(TAG, "stats: tx=%u rx=0 cmd=0 last_rx=never connected=%s", (unsigned) this->tx_count_,
+                 this->client_ready_ ? "yes" : "no");
+      }
+    }
+
     void LoxoneComponent::send_string_data(std::string data) {
       if (!client_ready_) {
         if (send_string_buffer_.size() >= send_buffer_length_) {
-          ESP_LOGW(TAG, "send buffer is full, discarding some data");
+          ESP_LOGW(TAG, "send buffer full (%u), dropping oldest", (unsigned) this->send_buffer_length_);
           send_string_buffer_.pop();
         }
 
         send_string_buffer_.push(data);
-        ESP_LOGD(TAG, "client is not ready, push into buffer, string data: %s", data.c_str());
+        ESP_LOGD(TAG, "queued \"%s\" (%u/%u), client not ready", data.c_str(),
+                 (unsigned) this->send_string_buffer_.size(), (unsigned) this->send_buffer_length_);
         return;
       }
 
@@ -338,7 +371,7 @@ namespace esphome {
         return;
       }
 
-      ESP_LOGD(TAG, "send string data: %s", data.c_str());
+      this->log_tx_(data);
     }
   }
 }

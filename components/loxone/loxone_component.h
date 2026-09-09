@@ -118,6 +118,18 @@ namespace esphome {
       uint32_t last_rx_ms_{0};
       bool have_rx_{false};
       void note_rx_();
+
+      // Communication logging (TX/RX at DEBUG, transitions + heartbeat at INFO)
+      uint32_t tx_count_{0};
+      uint32_t rx_packet_count_{0};
+      uint32_t rx_cmd_count_{0};
+      int8_t client_ready_state_{-1};  // -1 unknown, 0 down, 1 up (edge-logging)
+      uint32_t last_heartbeat_ms_{0};
+      uint32_t last_heartbeat_activity_{0};
+      void log_tx_(const std::string &data);
+      void log_rx_(const char *transport, const void *data, size_t len);
+      void set_client_ready_(bool ready);
+      void log_stats_();
 #ifdef USE_TEXT_SENSOR
       text_sensor::TextSensor *miniserver_ip_text_sensor_{nullptr};
       text_sensor::TextSensor *miniserver_port_text_sensor_{nullptr};
