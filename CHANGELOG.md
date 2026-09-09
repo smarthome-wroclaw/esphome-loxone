@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.6.0...v1.6.1) (2026-09-08)
+
+
+### Documentation
+
+* document the template: block and /loxone/ endpoint ([#15](https://github.com/smarthome-wroclaw/esphome-loxone/issues/15)) ([b643598](https://github.com/smarthome-wroclaw/esphome-loxone/commit/b6435983f2bc68b98fbd7516156996b929ea62b8))
+
 ## [1.6.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.5.0...v1.6.0) (2026-09-08)
 
 
