@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.6.1...v1.7.0) (2026-09-09)
+
+
+### Features
+
+* readable TX/RX logging for Loxone traffic ([#17](https://github.com/smarthome-wroclaw/esphome-loxone/issues/17)) ([8aeaf65](https://github.com/smarthome-wroclaw/esphome-loxone/commit/8aeaf650bd205c2cea8cf6093658b89a391b75a5))
+
 ## [1.6.1](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.6.0...v1.6.1) (2026-09-08)
 
 
