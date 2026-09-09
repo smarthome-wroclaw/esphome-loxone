@@ -143,9 +143,41 @@ level):
 [C][loxone:0xx]:   Miniserver: 192.168.50.124:9999
 [C][loxone:0xx]:   Listen port: 8888
 [C][loxone:0xx]:   Send buffer length: 64
+[C][loxone:0xx]:   For TX/RX traffic: logger -> logs: {loxone: DEBUG}
 [C][loxone:0xx]:   Reachability probe: 192.168.50.124:80 every 30000ms (timeout 4000ms)
 [C][loxone:0xx]:   Config template: http://<device-ip>/loxone/  (ready)
 ```
+
+# Seeing the traffic in the logs
+
+At the **default** log level the component prints, under the `loxone` tag:
+
+```
+[I][loxone:0xx]: client connected (udp 192.168.50.124:9999)
+[I][loxone:0xx]: stats: tx=12 rx=40 cmd=40 last_rx=3s connected=yes
+```
+
+`client connected` / `client disconnected` are logged only on change; the
+`stats:` line appears at most once a minute and only when traffic moved since
+the last one. Together with the `connected` binary sensor this is enough to
+confirm the link without touching the Loxone side.
+
+For the individual messages, raise the component to `DEBUG`:
+
+```yaml
+logger:
+  logs:
+    loxone: DEBUG
+```
+
+```
+[D][loxone:0xx]: TX -> 192.168.50.124:9999  "RELAY-SET-255,1,1,OK"
+[D][loxone:0xx]: RX <- udp 18 B  "RELAY-SET-255,1,0"
+[D][loxone:0xx]: RX cmd "RELAY-SET-255,1,0"
+```
+
+`RX <-` is each raw packet; `RX cmd` is each complete command after the
+`delimiter` split (what `on_string_data` receives).
 
 # Loxone Config templates (optional)
 
