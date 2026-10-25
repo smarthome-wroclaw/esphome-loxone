@@ -23,10 +23,13 @@ namespace loxone {
  */
 class LoxoneTemplateHandler : public AsyncWebHandler {
  public:
-  LoxoneTemplateHandler(std::string index_html, std::string inputs_xml, std::string outputs_xml)
+  LoxoneTemplateHandler(std::string index_html, std::string inputs_xml, std::string outputs_xml,
+                        std::string inputs_filename, std::string outputs_filename)
       : index_html_(std::move(index_html)),
         inputs_xml_(std::move(inputs_xml)),
-        outputs_xml_(std::move(outputs_xml)) {}
+        outputs_xml_(std::move(outputs_xml)),
+        inputs_filename_(std::move(inputs_filename)),
+        outputs_filename_(std::move(outputs_filename)) {}
 
   bool canHandle(AsyncWebServerRequest *request) const override;
   void handleRequest(AsyncWebServerRequest *request) override;
@@ -40,6 +43,8 @@ class LoxoneTemplateHandler : public AsyncWebHandler {
   std::string index_html_;   // contains "{IP}" placeholder
   std::string inputs_xml_;
   std::string outputs_xml_;  // contains "{IP}" placeholder
+  std::string inputs_filename_;
+  std::string outputs_filename_;
 };
 
 }  // namespace loxone

@@ -6,6 +6,7 @@ templates) for importing matching Virtual Inputs / Outputs into Loxone Config.
 """
 
 import html
+import re
 from xml.sax.saxutils import quoteattr
 
 import esphome.codegen as cg
@@ -75,7 +76,7 @@ def _build_inputs_xml(title: str, loxone_port: int, items) -> str:
             f"Check={_a(cmd + ' \\v')} Signed=\"true\" Analog={_a(analog)} "
             f"SourceValLow={_a(lo)} DestValLow={_a(lo)} "
             f"SourceValHigh={_a(hi)} DestValHigh={_a(hi)} "
-            f"DefVal=\"0\" MinVal={_a(lo)} MaxVal={_a(hi)} Unit=\"&lt;v&gt;\" HintText=\"\"/>"
+            f"DefVal=\"0\" MinVal={_a(lo)} MaxVal={_a(hi)}/>"
         )
     lines.append("</VirtualInUdp>")
     return "\n".join(lines) + "\n"
@@ -234,6 +235,7 @@ def add_template_code(config, var):
     delimiter = config["delimiter"]
     inputs = tmpl[CONF_INPUTS]
     outputs = tmpl[CONF_OUTPUTS]
+    filename_prefix = re.sub(r"[^A-Za-z0-9._-]+", "-", str(CORE.name)).strip("-._") or "device"
 
     index_html = _build_index_html(
         title, loxone_id, loxone_ip, loxone_port, listen_port, delimiter, inputs, outputs
@@ -241,4 +243,12 @@ def add_template_code(config, var):
     inputs_xml = _build_inputs_xml(title, loxone_port, inputs)
     outputs_xml = _build_outputs_xml(title, listen_port, delimiter, outputs)
 
-    cg.add(var.set_loxone_template(index_html, inputs_xml, outputs_xml))
+    cg.add(
+        var.set_loxone_template(
+            index_html,
+            inputs_xml,
+            outputs_xml,
+            f"{filename_prefix}-loxone-inputs.xml",
+            f"{filename_prefix}-loxone-outputs.xml",
+        )
+    )
