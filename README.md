@@ -103,15 +103,17 @@ ID and must end with the configured delimiter. If the matching command is in
 0–255 range maps `LED_POD_SZAFKA 128` to about 50% brightness. Loxone should
 send it to the device's `listen_port` (UDP port 8888 in the example).
 
-If `auto_control_lights` is enabled and `template:` is present, the generated
-`outputs.xml` includes all light commands automatically as analog 0–100
-controls. Without `template:`, create matching Virtual Output commands in
-Loxone Config yourself. Numeric and binary sensor changes are sent when ESPHome
-publishes a state; this option does not force an initial sensor update.
-
-Add `template: {}` if you also want the device to serve its regular Loxone
-Config template page. Existing manually declared inputs and outputs remain
-available alongside automatically generated light controls.
+When either automatic state option is enabled, the device also generates its
+Loxone Config page automatically; no `template: {}` block is needed. The page
+includes Virtual Input commands for automatically sent sensors, binary sensors
+and lights, plus Virtual Output commands for automatically controlled lights.
+Numeric sensor ranges cannot be inferred from entity metadata, so generated
+sensor inputs use a broad pass-through range. Add an explicit `template:` entry
+for a command when you want to set a narrower range. Existing manually declared
+inputs and outputs remain available alongside automatically generated entries.
+If both automatic options are disabled, add `template: {}` to enable the page.
+Numeric and binary sensor changes are sent when ESPHome publishes a state; this
+option does not force an initial sensor update.
 
 # Status & config entities (optional)
 
@@ -210,8 +212,9 @@ logger:
 
 # Loxone Config templates (optional)
 
-Add a `template:` block and the device serves ready-to-import Loxone Config
-templates from its own web server (needs a `web_server:` component):
+With a `web_server:` component, the device serves ready-to-import Loxone Config
+templates when `template:` is configured or either automatic state option is
+enabled:
 
 | URL | Content |
 | --- | --- |
@@ -249,5 +252,7 @@ lambda skeleton. You still wire the actual behaviour yourself:
 The `/loxone/` page prints both skeletons pre-filled with your command names.
 
 Per command: `command` (required), `analog` (default `false` → digital 0/1),
-`min` / `max` (analog range, default `0`/`1`). Set the Miniserver's *UDP receive
-port* to match `loxone_port`.
+`min` / `max` (analog range, default `0`/`1`). Automatically generated numeric
+sensor inputs use a broad pass-through range; declare a matching command under
+`template.inputs` to override it. Set the Miniserver's *UDP receive port* to
+match `loxone_port`.

@@ -7,7 +7,17 @@ from esphome.const import (
     CONF_ID,
     CONF_TRIGGER_ID,
 )
-from .loxone_template import CONF_TEMPLATE, TEMPLATE_SCHEMA, add_template_code
+from .loxone_template import (
+    CONF_ANALOG,
+    CONF_COMMAND,
+    CONF_INPUTS,
+    CONF_MAX,
+    CONF_MIN,
+    CONF_OUTPUTS,
+    CONF_TEMPLATE,
+    TEMPLATE_SCHEMA,
+    add_template_code,
+)
 
 DEPENDENCIES = ['network']
 AUTO_LOAD = ['async_tcp', 'socket', 'web_server_base']
@@ -49,9 +59,8 @@ CONFIG_SCHEMA = cv.Schema({
             cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(OnStringDataTrigger),
         }
     ),
-    # Optional: serve importable Loxone Config templates at GET /loxone/
-    # (needs a `web_server:` component). Auto-controlled lights are added to
-    # the generated outputs when `auto_control_lights` is enabled.
+    # Serve importable Loxone Config templates at GET /loxone/ when this block
+    # or either automatic state feature is enabled (needs `web_server:`).
     cv.Optional(CONF_TEMPLATE): TEMPLATE_SCHEMA,
 }).extend(cv.COMPONENT_SCHEMA)
 
@@ -85,6 +94,12 @@ def to_code(config):
     cg.add(var.set_check_timeout(config[CONF_CHECK_TIMEOUT].total_milliseconds))
     yield cg.register_component(var, config)
 
+    template_config = config.get(CONF_TEMPLATE)
+    if template_config is None and (config["auto_send_sensors"] or config[CONF_AUTO_CONTROL_LIGHTS]):
+        # Automatic state features have enough information to create a useful
+        # default import page. An explicit `template:` remains optional.
+        template_config = {CONF_INPUTS: [], CONF_OUTPUTS: []}
+
     # Entity IDs are assigned during config validation, so subscribe to sensors
     # and lights without per-entity YAML.
     if config["auto_send_sensors"]:
@@ -101,7 +116,37 @@ def to_code(config):
                 command = "".join(ch if ch.isalnum() else "_" for ch in str(entity_id)).upper()
                 cg.add(getattr(var, method)(entity_var, command))
 
-    template_config = config.get(CONF_TEMPLATE)
+        # Describe the automatically sent entities in the Virtual Input XML as
+        # well. Numeric sensor ranges cannot be inferred from ESPHome config,
+        # so use a broad identity range; an explicit template entry can narrow
+        # it for a particular command.
+        inputs = list(template_config.get(CONF_INPUTS, []))
+        existing_commands = {item[CONF_COMMAND] for item in inputs}
+        auto_input_domains = (
+            ("sensor", True, -1_000_000_000, 1_000_000_000),
+            ("binary_sensor", False, 0, 1),
+            ("light", True, 0, 100),
+        )
+        for domain, analog, min_value, max_value in auto_input_domains:
+            for entity_config in CORE.config.get(domain, []):
+                entity_id = entity_config.get(CONF_ID)
+                if entity_id is None:
+                    continue
+                command = "".join(ch if ch.isalnum() else "_" for ch in str(entity_id)).upper()
+                if command in existing_commands:
+                    continue
+                inputs.append(
+                    {
+                        CONF_COMMAND: command,
+                        CONF_ANALOG: analog,
+                        CONF_MIN: min_value,
+                        CONF_MAX: max_value,
+                    }
+                )
+                existing_commands.add(command)
+        template_config = dict(template_config)
+        template_config[CONF_INPUTS] = inputs
+
     if config[CONF_AUTO_CONTROL_LIGHTS]:
         light_configs = CORE.config.get("light", [])
         configured_outputs = {} if template_config is None else {
@@ -118,19 +163,20 @@ def to_code(config):
             max_value = 100 if output_config is None else output_config["max"]
             cg.add(var.add_auto_control_light(light_var, command, min_value, max_value))
 
-        if template_config is not None:
-            template_config = dict(template_config)
-            outputs = list(template_config.get("outputs", []))
-            existing_commands = {output["command"] for output in outputs}
-            for light_config in light_configs:
-                light_id = light_config.get(CONF_ID)
-                if light_id is None:
-                    continue
-                command = "".join(ch if ch.isalnum() else "_" for ch in str(light_id)).upper()
-                if command not in existing_commands:
-                    outputs.append({"command": command, "analog": True, "min": 0, "max": 100})
-                    existing_commands.add(command)
-            template_config["outputs"] = outputs
+        outputs = list(template_config.get(CONF_OUTPUTS, []))
+        existing_commands = {output[CONF_COMMAND] for output in outputs}
+        for light_config in light_configs:
+            light_id = light_config.get(CONF_ID)
+            if light_id is None:
+                continue
+            command = "".join(ch if ch.isalnum() else "_" for ch in str(light_id)).upper()
+            if command not in existing_commands:
+                outputs.append(
+                    {CONF_COMMAND: command, CONF_ANALOG: True, CONF_MIN: 0, CONF_MAX: 100}
+                )
+                existing_commands.add(command)
+        template_config = dict(template_config)
+        template_config[CONF_OUTPUTS] = outputs
 
     if template_config is not None:
         template_codegen_config = dict(config)

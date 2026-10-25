@@ -16,9 +16,10 @@ namespace loxone {
  *   GET /loxone/inputs.xml  - <VirtualInUdp>  template  (device -> Loxone)
  *   GET /loxone/outputs.xml - <VirtualOut> UDP template (Loxone -> device)
  *
- * The XML/HTML bodies are rendered at compile time from the `template:` block and
- * baked in as strings. The only runtime work is substituting "{IP}" (this device's
- * address, taken from the request Host header) into the outputs template and page.
+ * The XML/HTML bodies are rendered at compile time from explicit template entries
+ * and automatic entities, then baked in as strings. The only runtime work is
+ * substituting "{IP}" (this device's address, taken from the request Host header)
+ * into the outputs template and page.
  */
 class LoxoneTemplateHandler : public AsyncWebHandler {
  public:
