@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.7.0...v1.8.0) (2026-10-25)
+
+
+### Features
+
+* auto-send sensor states to Loxone ([#19](https://github.com/smarthome-wroclaw/esphome-loxone/issues/19)) ([ec6bb6b](https://github.com/smarthome-wroclaw/esphome-loxone/commit/ec6bb6b757a12f5cb48e4103ee37bc9bf22de361))
+
 ## [1.7.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.6.1...v1.7.0) (2026-09-09)
 
 
