@@ -67,6 +67,7 @@ loxone:
   loxone_port: 9999 # loxone server port
   listen_port: 8888 # esp32 will listen on this port
   delimiter: "\n" # delimiter used to identify the end of a command
+  auto_send_sensors: true # send all sensor and binary_sensor states to Loxone
 
   # Send buffer length
   # When the network is not ready, it can buffer some commands that are pending to be sent.
@@ -83,6 +84,24 @@ loxone:
           id(loxone_switch_1).turn_off();
         }
 ```
+
+## Automatically send numeric sensor states
+
+Set `auto_send_sensors: true` under `loxone:` to subscribe to every numeric
+ESPHome `sensor` and every `binary_sensor`, then send each published state to
+the Miniserver. The command
+name is the sensor's ESPHome `id`, uppercased; for example `boneIO_temp` is sent
+as `BONEIO_TEMP 23.5` followed by the configured delimiter. The ID therefore
+also becomes the command name to create in Loxone Config. This includes sensors
+from any ESPHome platform and does not require adding an `on_value` lambda to
+each sensor.
+
+This option covers numeric `sensor:` and `binary_sensor:` entities. Binary
+sensor states are sent as `ID 1` when active and `ID 0` when inactive. Text
+sensors are not included. It sends updates when ESPHome publishes a state; it
+does not force sensors to publish an initial value. Add `template: {}` if you
+also want the device to serve its regular Loxone Config template page; its
+inputs remain manually declared there.
 
 # Status & config entities (optional)
 
