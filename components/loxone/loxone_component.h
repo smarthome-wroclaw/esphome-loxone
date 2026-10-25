@@ -2,6 +2,7 @@
 
 #include <string>
 #include <queue>
+#include <cstdio>
 
 #include <memory>
 
@@ -49,6 +50,20 @@ namespace esphome {
 #ifdef USE_SENSOR
       void set_last_message_age_sensor(sensor::Sensor *s) {
         this->last_message_age_sensor_ = s;
+      };
+      void add_auto_sensor(sensor::Sensor *s, const std::string &command) {
+        s->add_on_state_callback([this, command](float value) {
+          char value_buf[24];
+          snprintf(value_buf, sizeof(value_buf), "%.7g", value);
+          this->send_string_data(command + " " + value_buf);
+        });
+      };
+#endif
+#ifdef USE_BINARY_SENSOR
+      void add_auto_binary_sensor(binary_sensor::BinarySensor *s, const std::string &command) {
+        s->add_on_state_callback([this, command](bool value) {
+          this->send_string_data(command + (value ? " 1" : " 0"));
+        });
       };
 #endif
 

@@ -2,6 +2,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import automation
 from esphome.components.socket import SocketType, consume_sockets
+from esphome.core import CORE
 from esphome.const import (
     CONF_ID,
     CONF_TRIGGER_ID,
@@ -33,6 +34,7 @@ CONFIG_SCHEMA = cv.Schema({
     cv.Required("loxone_port"): cv.int_range(0, 65535),
     cv.Required("listen_port"): cv.int_range(0, 65535),
     cv.Optional("send_buffer_length", default=20): cv.int_range(0, 1024),
+    cv.Optional("auto_send_sensors", default=False): cv.boolean,
     cv.Optional("delimiter", default="\n"): cv.string,
     # Reachability probe for the optional `connected` binary sensor: the ESP
     # opens a short TCP connection to the Miniserver on `probe_port` (its web
@@ -80,6 +82,21 @@ def to_code(config):
     cg.add(var.set_check_interval(config[CONF_CHECK_INTERVAL].total_milliseconds))
     cg.add(var.set_check_timeout(config[CONF_CHECK_TIMEOUT].total_milliseconds))
     yield cg.register_component(var, config)
+
+    # Entity IDs are assigned during config validation, so subscribe to all
+    # numeric and binary sensors without per-entity YAML.
+    if config["auto_send_sensors"]:
+        for domain, method in (
+            ("sensor", "add_auto_sensor"),
+            ("binary_sensor", "add_auto_binary_sensor"),
+        ):
+            for entity_config in CORE.config.get(domain, []):
+                entity_id = entity_config.get(CONF_ID)
+                if entity_id is None:
+                    continue
+                entity_var = yield cg.get_variable(entity_id)
+                command = "".join(ch if ch.isalnum() else "_" for ch in str(entity_id)).upper()
+                cg.add(getattr(var, method)(entity_var, command))
 
     if CONF_TEMPLATE in config:
         add_template_code(config, var)
