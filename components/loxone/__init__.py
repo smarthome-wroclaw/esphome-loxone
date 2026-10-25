@@ -104,13 +104,19 @@ def to_code(config):
     template_config = config.get(CONF_TEMPLATE)
     if config[CONF_AUTO_CONTROL_LIGHTS]:
         light_configs = CORE.config.get("light", [])
+        configured_outputs = {} if template_config is None else {
+            output["command"]: output for output in template_config.get("outputs", [])
+        }
         for light_config in light_configs:
             light_id = light_config.get(CONF_ID)
             if light_id is None:
                 continue
             light_var = yield cg.get_variable(light_id)
             command = "".join(ch if ch.isalnum() else "_" for ch in str(light_id)).upper()
-            cg.add(var.add_auto_control_light(light_var, command))
+            output_config = configured_outputs.get(command)
+            min_value = 0 if output_config is None else output_config["min"]
+            max_value = 100 if output_config is None else output_config["max"]
+            cg.add(var.add_auto_control_light(light_var, command, min_value, max_value))
 
         if template_config is not None:
             template_config = dict(template_config)

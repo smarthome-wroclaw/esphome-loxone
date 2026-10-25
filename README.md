@@ -96,10 +96,12 @@ come from ESPHome entity IDs, uppercased. Numeric sensor values are sent as
 configured delimiter. Text sensors are not included.
 
 Set `auto_control_lights: true` to accept Loxone commands for all `light:`
-entities. A command such as `LED_POD_SZAFKA 64` sets that light to 64% and
+entities. By default, `LED_POD_SZAFKA 64` sets that light to 64% and
 `LED_POD_SZAFKA 0` turns it off. The command uses the uppercased ESPHome light
-ID and must end with the configured delimiter. Loxone should send it to the
-device's `listen_port` (UDP port 8888 in the example).
+ID and must end with the configured delimiter. If the matching command is in
+`template.outputs`, its `min`/`max` range is used instead; for example, a
+0–255 range maps `LED_POD_SZAFKA 128` to about 50% brightness. Loxone should
+send it to the device's `listen_port` (UDP port 8888 in the example).
 
 If `auto_control_lights` is enabled and `template:` is present, the generated
 `outputs.xml` includes all light commands automatically as analog 0–100

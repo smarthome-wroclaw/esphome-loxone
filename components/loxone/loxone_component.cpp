@@ -37,12 +37,17 @@ namespace esphome {
           return;
         }
 
-        value = std::max(0.0f, std::min(100.0f, value));
-        if (value == 0.0f) {
+        if (entry.max_value <= entry.min_value) {
+          ESP_LOGW(TAG, "auto light command '%s' has an invalid configured range", command.c_str());
+          return;
+        }
+        float brightness = (value - entry.min_value) / (entry.max_value - entry.min_value);
+        brightness = std::max(0.0f, std::min(1.0f, brightness));
+        if (brightness == 0.0f) {
           entry.state->turn_off().perform();
         } else {
           auto call = entry.state->turn_on();
-          call.set_brightness_if_supported(value / 100.0f);
+          call.set_brightness_if_supported(brightness);
           call.perform();
         }
         ESP_LOGD(TAG, "auto light command '%s' applied", command.c_str());
