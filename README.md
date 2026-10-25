@@ -68,6 +68,7 @@ loxone:
   listen_port: 8888 # esp32 will listen on this port
   delimiter: "\n" # delimiter used to identify the end of a command
   auto_send_sensors: true # send sensor, binary_sensor and light states to Loxone
+  auto_control_lights: true # accept Loxone brightness commands for every light
 
   # Send buffer length
   # When the network is not ready, it can buffer some commands that are pending to be sent.
@@ -85,20 +86,32 @@ loxone:
         }
 ```
 
-## Automatically send sensor and light states
+## Automatically send states and control lights
 
-Set `auto_send_sensors: true` under `loxone:` to subscribe to all numeric
-ESPHome `sensor:`, `binary_sensor:` and `light:` entities, without adding
-callbacks to each entity. The command name is the entity's ESPHome `id`,
-uppercased. Numeric sensor values are sent as `ID value` (for example,
-`BONEIO_TEMP 23.5`); binary sensor values are sent as `ID 1` or `ID 0`; light
-states are sent as `ID brightness` from `0` to `100` (`0` means off). Each
-message ends with the configured delimiter. Create matching command names in
-Loxone Config. Text sensors are not included. Updates are sent when ESPHome
-publishes a state; sensors are not forced to publish an initial value.
+Set `auto_send_sensors: true` to publish all numeric `sensor:`,
+`binary_sensor:` and `light:` states without per-entity callbacks. Command names
+come from ESPHome entity IDs, uppercased. Numeric sensor values are sent as
+`ID value` (for example, `BONEIO_TEMP 29`); binary sensor values as `ID 1` or
+`ID 0`; light brightness as `ID 0..100` (`0` means off). Messages end with the
+configured delimiter. Text sensors are not included.
+
+Set `auto_control_lights: true` to accept Loxone commands for all `light:`
+entities. By default, `LED_POD_SZAFKA 64` sets that light to 64% and
+`LED_POD_SZAFKA 0` turns it off. The command uses the uppercased ESPHome light
+ID and must end with the configured delimiter. If the matching command is in
+`template.outputs`, its `min`/`max` range is used instead; for example, a
+0–255 range maps `LED_POD_SZAFKA 128` to about 50% brightness. Loxone should
+send it to the device's `listen_port` (UDP port 8888 in the example).
+
+If `auto_control_lights` is enabled and `template:` is present, the generated
+`outputs.xml` includes all light commands automatically as analog 0–100
+controls. Without `template:`, create matching Virtual Output commands in
+Loxone Config yourself. Numeric and binary sensor changes are sent when ESPHome
+publishes a state; this option does not force an initial sensor update.
 
 Add `template: {}` if you also want the device to serve its regular Loxone
-Config template page; its inputs remain manually declared there.
+Config template page. Existing manually declared inputs and outputs remain
+available alongside automatically generated light controls.
 
 # Status & config entities (optional)
 
