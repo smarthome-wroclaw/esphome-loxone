@@ -74,6 +74,9 @@ namespace esphome {
 #endif
 #ifdef USE_LIGHT
       void add_auto_light(light::LightState *s, const std::string &command);
+      void add_auto_control_light(light::LightState *s, const std::string &command) {
+        this->auto_control_lights_.push_back({s, command});
+      };
 #endif
 
 #ifdef USE_TEXT_SENSOR
@@ -125,6 +128,12 @@ namespace esphome {
       std::vector<OnStringDataTrigger *> string_triggers_{};
 #ifdef USE_LIGHT
       std::vector<AutoLightListener *> auto_light_listeners_{};
+      struct AutoLightControl {
+        light::LightState *state;
+        std::string command;
+      };
+      std::vector<AutoLightControl> auto_control_lights_{};
+      void handle_auto_light_command_(const std::string &command);
 #endif
       std::string protocol_;
       std::string loxone_ip_;

@@ -215,7 +215,10 @@ def _build_index_html(
 <ul>{out_rows}</ul>
 
 <h2>Matching ESPHome config</h2>
-<p>The firmware does not send or receive these on its own &mdash; wire them in your YAML:</p>
+<p>Sensor inputs need matching Loxone Virtual Input commands. Their firmware updates
+are sent automatically when <code>auto_send_sensors</code> is enabled. Light outputs
+are handled automatically when <code>auto_control_lights</code> is enabled; other
+outputs need matching <code>on_string_data</code> actions.</p>
 <pre>{pub}</pre>
 <pre>{cmd}</pre>
 </body></html>

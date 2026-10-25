@@ -16,6 +16,7 @@ CONF_LOXONE_ID = "loxone_id"
 CONF_PROBE_PORT = "probe_port"
 CONF_CHECK_INTERVAL = "check_interval"
 CONF_CHECK_TIMEOUT = "check_timeout"
+CONF_AUTO_CONTROL_LIGHTS = "auto_control_lights"
 
 loxone_ns = cg.esphome_ns.namespace('loxone')
 LoxoneComponent = loxone_ns.class_('LoxoneComponent', cg.PollingComponent)
@@ -35,6 +36,7 @@ CONFIG_SCHEMA = cv.Schema({
     cv.Required("listen_port"): cv.int_range(0, 65535),
     cv.Optional("send_buffer_length", default=20): cv.int_range(0, 1024),
     cv.Optional("auto_send_sensors", default=False): cv.boolean,
+    cv.Optional(CONF_AUTO_CONTROL_LIGHTS, default=False): cv.boolean,
     cv.Optional("delimiter", default="\n"): cv.string,
     # Reachability probe for the optional `connected` binary sensor: the ESP
     # opens a short TCP connection to the Miniserver on `probe_port` (its web
@@ -48,8 +50,8 @@ CONFIG_SCHEMA = cv.Schema({
         }
     ),
     # Optional: serve importable Loxone Config templates at GET /loxone/
-    # (needs a `web_server:` component). Describes commands only - generates
-    # no send/receive code.
+    # (needs a `web_server:` component). Auto-controlled lights are added to
+    # the generated outputs when `auto_control_lights` is enabled.
     cv.Optional(CONF_TEMPLATE): TEMPLATE_SCHEMA,
 }).extend(cv.COMPONENT_SCHEMA)
 
@@ -99,8 +101,35 @@ def to_code(config):
                 command = "".join(ch if ch.isalnum() else "_" for ch in str(entity_id)).upper()
                 cg.add(getattr(var, method)(entity_var, command))
 
-    if CONF_TEMPLATE in config:
-        add_template_code(config, var)
+    template_config = config.get(CONF_TEMPLATE)
+    if config[CONF_AUTO_CONTROL_LIGHTS]:
+        light_configs = CORE.config.get("light", [])
+        for light_config in light_configs:
+            light_id = light_config.get(CONF_ID)
+            if light_id is None:
+                continue
+            light_var = yield cg.get_variable(light_id)
+            command = "".join(ch if ch.isalnum() else "_" for ch in str(light_id)).upper()
+            cg.add(var.add_auto_control_light(light_var, command))
+
+        if template_config is not None:
+            template_config = dict(template_config)
+            outputs = list(template_config.get("outputs", []))
+            existing_commands = {output["command"] for output in outputs}
+            for light_config in light_configs:
+                light_id = light_config.get(CONF_ID)
+                if light_id is None:
+                    continue
+                command = "".join(ch if ch.isalnum() else "_" for ch in str(light_id)).upper()
+                if command not in existing_commands:
+                    outputs.append({"command": command, "analog": True, "min": 0, "max": 100})
+                    existing_commands.add(command)
+            template_config["outputs"] = outputs
+
+    if template_config is not None:
+        template_codegen_config = dict(config)
+        template_codegen_config[CONF_TEMPLATE] = template_config
+        add_template_code(template_codegen_config, var)
 
     for conf in config.get("on_string_data", []):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)

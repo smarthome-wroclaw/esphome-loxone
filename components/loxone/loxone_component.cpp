@@ -1,7 +1,9 @@
 #include "loxone_component.h"
 
+#include <algorithm>
 #include <cerrno>
 #include <cmath>
+#include <cstdlib>
 
 namespace esphome {
   namespace loxone {
@@ -18,6 +20,34 @@ namespace esphome {
       char value_buf[8];
       snprintf(value_buf, sizeof(value_buf), "%.0f", brightness * 100.0f);
       this->parent_->send_string_data(this->command_ + " " + value_buf);
+    }
+
+    void LoxoneComponent::handle_auto_light_command_(const std::string &command) {
+      for (const auto &entry : this->auto_control_lights_) {
+        const std::string prefix = entry.command + " ";
+        if (command.compare(0, prefix.size(), prefix) != 0) {
+          continue;
+        }
+
+        const char *value_start = command.c_str() + prefix.size();
+        char *value_end = nullptr;
+        float value = std::strtof(value_start, &value_end);
+        if (value_end == value_start || *value_end != '\0' || !std::isfinite(value)) {
+          ESP_LOGW(TAG, "auto light command '%s' has an invalid brightness", command.c_str());
+          return;
+        }
+
+        value = std::max(0.0f, std::min(100.0f, value));
+        if (value == 0.0f) {
+          entry.state->turn_off().perform();
+        } else {
+          auto call = entry.state->turn_on();
+          call.set_brightness_if_supported(value / 100.0f);
+          call.perform();
+        }
+        ESP_LOGD(TAG, "auto light command '%s' applied", command.c_str());
+        return;
+      }
     }
 #endif
 
@@ -253,6 +283,9 @@ namespace esphome {
           if (this->last_message_text_sensor_ != nullptr) {
             this->last_message_text_sensor_->publish_state(command);
           }
+#endif
+#ifdef USE_LIGHT
+          this->handle_auto_light_command_(command);
 #endif
           // 假设 triggers_ 是一个能够响应字符串指令的对象
           for (auto& trigger : string_triggers_) {
