@@ -1,9 +1,8 @@
 """Compile-time renderer for the /loxone/ config-template endpoint.
 
-The `template:` block on the `loxone:` component is purely descriptive - it
-generates no runtime send/receive code. It is turned into three static bodies
-(an HTML index plus two Loxone Config templates) that the device serves so you
-can import matching Virtual Inputs / Outputs into Loxone Config in a few clicks.
+An explicit `template:` block or the automatic state options on the `loxone:`
+component generate three static bodies (an HTML index plus two Loxone Config
+templates) for importing matching Virtual Inputs / Outputs into Loxone Config.
 """
 
 import html

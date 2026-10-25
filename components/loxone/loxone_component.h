@@ -119,7 +119,7 @@ namespace esphome {
 
 #if defined(USE_NETWORK) && !defined(USE_ZEPHYR)
       // Enable the /loxone/ config-template endpoint. Bodies are rendered at
-      // codegen time from the `template:` block.
+      // codegen time from explicit template entries and automatic entities.
       void set_loxone_template(const std::string &index_html, const std::string &inputs_xml,
                                const std::string &outputs_xml) {
         this->template_handler_ = new LoxoneTemplateHandler(index_html, inputs_xml, outputs_xml);
