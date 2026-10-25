@@ -67,7 +67,7 @@ loxone:
   loxone_port: 9999 # loxone server port
   listen_port: 8888 # esp32 will listen on this port
   delimiter: "\n" # delimiter used to identify the end of a command
-  auto_send_sensors: true # send all sensor and binary_sensor states to Loxone
+  auto_send_sensors: true # send sensor, binary_sensor and light states to Loxone
 
   # Send buffer length
   # When the network is not ready, it can buffer some commands that are pending to be sent.
@@ -85,23 +85,20 @@ loxone:
         }
 ```
 
-## Automatically send numeric sensor states
+## Automatically send sensor and light states
 
-Set `auto_send_sensors: true` under `loxone:` to subscribe to every numeric
-ESPHome `sensor` and every `binary_sensor`, then send each published state to
-the Miniserver. The command
-name is the sensor's ESPHome `id`, uppercased; for example `boneIO_temp` is sent
-as `BONEIO_TEMP 23.5` followed by the configured delimiter. The ID therefore
-also becomes the command name to create in Loxone Config. This includes sensors
-from any ESPHome platform and does not require adding an `on_value` lambda to
-each sensor.
+Set `auto_send_sensors: true` under `loxone:` to subscribe to all numeric
+ESPHome `sensor:`, `binary_sensor:` and `light:` entities, without adding
+callbacks to each entity. The command name is the entity's ESPHome `id`,
+uppercased. Numeric sensor values are sent as `ID value` (for example,
+`BONEIO_TEMP 23.5`); binary sensor values are sent as `ID 1` or `ID 0`; light
+states are sent as `ID brightness` from `0` to `100` (`0` means off). Each
+message ends with the configured delimiter. Create matching command names in
+Loxone Config. Text sensors are not included. Updates are sent when ESPHome
+publishes a state; sensors are not forced to publish an initial value.
 
-This option covers numeric `sensor:` and `binary_sensor:` entities. Binary
-sensor states are sent as `ID 1` when active and `ID 0` when inactive. Text
-sensors are not included. It sends updates when ESPHome publishes a state; it
-does not force sensors to publish an initial value. Add `template: {}` if you
-also want the device to serve its regular Loxone Config template page; its
-inputs remain manually declared there.
+Add `template: {}` if you also want the device to serve its regular Loxone
+Config template page; its inputs remain manually declared there.
 
 # Status & config entities (optional)
 
