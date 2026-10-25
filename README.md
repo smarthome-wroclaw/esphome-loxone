@@ -222,6 +222,10 @@ enabled:
 | `http://<device-ip>/loxone/inputs.xml` | `<VirtualInUdp>` template — import under Loxone Config → *Virtual Inputs* → *Import Template* |
 | `http://<device-ip>/loxone/outputs.xml` | `<VirtualOut>` UDP template — import under *Virtual Outputs* → *Import Template* |
 
+Downloaded files include the ESPHome device name, for example
+`boneio-dimmer-gen2-kuchnia-loxone-inputs.xml` and
+`boneio-dimmer-gen2-kuchnia-loxone-outputs.xml`.
+
 ```yaml
 loxone:
   id: loxone1

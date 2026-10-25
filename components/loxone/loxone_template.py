@@ -6,6 +6,7 @@ templates) for importing matching Virtual Inputs / Outputs into Loxone Config.
 """
 
 import html
+import re
 from xml.sax.saxutils import quoteattr
 
 import esphome.codegen as cg
@@ -234,6 +235,7 @@ def add_template_code(config, var):
     delimiter = config["delimiter"]
     inputs = tmpl[CONF_INPUTS]
     outputs = tmpl[CONF_OUTPUTS]
+    filename_prefix = re.sub(r"[^A-Za-z0-9._-]+", "-", str(CORE.name)).strip("-._") or "device"
 
     index_html = _build_index_html(
         title, loxone_id, loxone_ip, loxone_port, listen_port, delimiter, inputs, outputs
@@ -241,4 +243,12 @@ def add_template_code(config, var):
     inputs_xml = _build_inputs_xml(title, loxone_port, inputs)
     outputs_xml = _build_outputs_xml(title, listen_port, delimiter, outputs)
 
-    cg.add(var.set_loxone_template(index_html, inputs_xml, outputs_xml))
+    cg.add(
+        var.set_loxone_template(
+            index_html,
+            inputs_xml,
+            outputs_xml,
+            f"{filename_prefix}-loxone-inputs.xml",
+            f"{filename_prefix}-loxone-outputs.xml",
+        )
+    )

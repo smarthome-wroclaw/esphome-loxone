@@ -63,7 +63,8 @@ void LoxoneTemplateHandler::handleRequest(AsyncWebServerRequest *request) {
 
   if (path == "/loxone/inputs.xml") {
     auto *r = request->beginResponse(200, "application/xml; charset=utf-8", this->inputs_xml_);
-    r->addHeader("Content-Disposition", "attachment; filename=\"loxone-inputs.xml\"");
+    const std::string content_disposition = "attachment; filename=\"" + this->inputs_filename_ + "\"";
+    r->addHeader("Content-Disposition", content_disposition.c_str());
     request->send(r);
     return;
   }
@@ -72,7 +73,8 @@ void LoxoneTemplateHandler::handleRequest(AsyncWebServerRequest *request) {
     std::string body = this->outputs_xml_;
     replace_all(body, "{IP}", this->device_ip_(request));
     auto *r = request->beginResponse(200, "application/xml; charset=utf-8", body);
-    r->addHeader("Content-Disposition", "attachment; filename=\"loxone-outputs.xml\"");
+    const std::string content_disposition = "attachment; filename=\"" + this->outputs_filename_ + "\"";
+    r->addHeader("Content-Disposition", content_disposition.c_str());
     request->send(r);
     return;
   }
