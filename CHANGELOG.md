@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.9.0...v1.10.0) (2026-10-25)
+
+
+### Features
+
+* generate Loxone template page for automatic entities ([#24](https://github.com/smarthome-wroclaw/esphome-loxone/issues/24)) ([438fd07](https://github.com/smarthome-wroclaw/esphome-loxone/commit/438fd07da83104ace1fa018a1bf20ee1a940e415))
+
 ## [1.9.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.8.0...v1.9.0) (2026-10-25)
 
 
