@@ -123,7 +123,7 @@ def to_code(config):
         inputs = list(template_config.get(CONF_INPUTS, []))
         existing_commands = {item[CONF_COMMAND] for item in inputs}
         auto_input_domains = (
-            ("sensor", True, -1_000_000_000, 1_000_000_000),
+            ("sensor", True, -10_000, 10_000),
             ("binary_sensor", False, 0, 1),
             ("light", True, 0, 100),
         )

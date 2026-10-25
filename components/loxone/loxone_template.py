@@ -76,7 +76,7 @@ def _build_inputs_xml(title: str, loxone_port: int, items) -> str:
             f"Check={_a(cmd + ' \\v')} Signed=\"true\" Analog={_a(analog)} "
             f"SourceValLow={_a(lo)} DestValLow={_a(lo)} "
             f"SourceValHigh={_a(hi)} DestValHigh={_a(hi)} "
-            f"DefVal=\"0\" MinVal={_a(lo)} MaxVal={_a(hi)} Unit=\"&lt;v&gt;\" HintText=\"\"/>"
+            f"DefVal=\"0\" MinVal={_a(lo)} MaxVal={_a(hi)}/>"
         )
     lines.append("</VirtualInUdp>")
     return "\n".join(lines) + "\n"
