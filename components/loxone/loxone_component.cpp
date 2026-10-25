@@ -5,6 +5,22 @@
 
 namespace esphome {
   namespace loxone {
+#ifdef USE_LIGHT
+    void LoxoneComponent::add_auto_light(light::LightState *state, const std::string &command) {
+      auto *listener = new AutoLightListener(this, state, command);
+      state->add_remote_values_listener(listener);
+      this->auto_light_listeners_.push_back(listener);
+    }
+
+    void AutoLightListener::on_light_remote_values_update() {
+      float brightness = 0.0f;
+      this->state_->remote_values.as_brightness(&brightness);
+      char value_buf[8];
+      snprintf(value_buf, sizeof(value_buf), "%.0f", brightness * 100.0f);
+      this->parent_->send_string_data(this->command_ + " " + value_buf);
+    }
+#endif
+
     void LoxoneComponent::setup() {
 #ifdef USE_BINARY_SENSOR
       // let the network come up before the first reachability probe

@@ -83,12 +83,13 @@ def to_code(config):
     cg.add(var.set_check_timeout(config[CONF_CHECK_TIMEOUT].total_milliseconds))
     yield cg.register_component(var, config)
 
-    # Entity IDs are assigned during config validation, so subscribe to all
-    # numeric and binary sensors without per-entity YAML.
+    # Entity IDs are assigned during config validation, so subscribe to sensors
+    # and lights without per-entity YAML.
     if config["auto_send_sensors"]:
         for domain, method in (
             ("sensor", "add_auto_sensor"),
             ("binary_sensor", "add_auto_binary_sensor"),
+            ("light", "add_auto_light"),
         ):
             for entity_config in CORE.config.get(domain, []):
                 entity_id = entity_config.get(CONF_ID)

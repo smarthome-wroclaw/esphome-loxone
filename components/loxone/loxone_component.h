@@ -20,6 +20,9 @@
 #ifdef USE_SENSOR
 #include "esphome/components/sensor/sensor.h"
 #endif
+#ifdef USE_LIGHT
+#include "esphome/components/light/light_state.h"
+#endif
 #include "AsyncUDP.h"
 #include "AsyncTCP.h"
 
@@ -28,6 +31,9 @@
 namespace esphome {
   namespace loxone {
     class OnStringDataTrigger;
+#ifdef USE_LIGHT
+    class AutoLightListener;
+#endif
 
     class LoxoneComponent : public PollingComponent {
     public:
@@ -65,6 +71,9 @@ namespace esphome {
           this->send_string_data(command + (value ? " 1" : " 0"));
         });
       };
+#endif
+#ifdef USE_LIGHT
+      void add_auto_light(light::LightState *s, const std::string &command);
 #endif
 
 #ifdef USE_TEXT_SENSOR
@@ -114,6 +123,9 @@ namespace esphome {
 #endif
     protected:
       std::vector<OnStringDataTrigger *> string_triggers_{};
+#ifdef USE_LIGHT
+      std::vector<AutoLightListener *> auto_light_listeners_{};
+#endif
       std::string protocol_;
       std::string loxone_ip_;
       uint16_t loxone_port_;
@@ -183,6 +195,20 @@ namespace esphome {
       void ensure_connect_tcp();
       void ensure_connect_udp();
     };
+
+#ifdef USE_LIGHT
+    class AutoLightListener : public light::LightRemoteValuesListener {
+    public:
+      AutoLightListener(LoxoneComponent *parent, light::LightState *state, std::string command)
+          : parent_(parent), state_(state), command_(std::move(command)) {}
+      void on_light_remote_values_update() override;
+
+    protected:
+      LoxoneComponent *parent_;
+      light::LightState *state_;
+      std::string command_;
+    };
+#endif
 
     class OnStringDataTrigger : public Trigger<std::string>, public Component {
       friend class LoxoneComponent;
