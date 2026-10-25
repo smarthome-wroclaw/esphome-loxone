@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.10.0...v1.11.0) (2026-10-25)
+
+
+### Features
+
+* include device name in Loxone XML downloads ([#26](https://github.com/smarthome-wroclaw/esphome-loxone/issues/26)) ([5983bcb](https://github.com/smarthome-wroclaw/esphome-loxone/commit/5983bcb22154a423c4f5b502c73482d01c0752a3))
+
 ## [1.10.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.9.0...v1.10.0) (2026-10-25)
 
 
