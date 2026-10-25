@@ -28,6 +28,12 @@ CONF_CHECK_INTERVAL = "check_interval"
 CONF_CHECK_TIMEOUT = "check_timeout"
 CONF_AUTO_CONTROL_LIGHTS = "auto_control_lights"
 
+
+def _entity_command(entity_config):
+    """Build a Loxone command from the configured entity name, falling back to its ID."""
+    value = entity_config.get("name") or str(entity_config[CONF_ID])
+    return "".join(ch if ch.isalnum() else "_" for ch in str(value)).upper()
+
 loxone_ns = cg.esphome_ns.namespace('loxone')
 LoxoneComponent = loxone_ns.class_('LoxoneComponent', cg.PollingComponent)
 OnStringDataTrigger = loxone_ns.class_("OnStringDataTrigger",
@@ -157,7 +163,11 @@ def to_code(config):
             if light_id is None:
                 continue
             light_var = yield cg.get_variable(light_id)
-            command = "".join(ch if ch.isalnum() else "_" for ch in str(light_id)).upper()
+            id_command = "".join(ch if ch.isalnum() else "_" for ch in str(light_id)).upper()
+            name_command = _entity_command(light_config)
+            # Preserve an explicit template entry keyed by the entity ID for
+            # backwards compatibility; otherwise use the configured light name.
+            command = id_command if id_command in configured_outputs else name_command
             output_config = configured_outputs.get(command)
             min_value = 0 if output_config is None else output_config["min"]
             max_value = 100 if output_config is None else output_config["max"]
@@ -169,7 +179,8 @@ def to_code(config):
             light_id = light_config.get(CONF_ID)
             if light_id is None:
                 continue
-            command = "".join(ch if ch.isalnum() else "_" for ch in str(light_id)).upper()
+            id_command = "".join(ch if ch.isalnum() else "_" for ch in str(light_id)).upper()
+            command = id_command if id_command in configured_outputs else _entity_command(light_config)
             if command not in existing_commands:
                 outputs.append(
                     {CONF_COMMAND: command, CONF_ANALOG: True, CONF_MIN: 0, CONF_MAX: 100}
