@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.8.0...v1.9.0) (2026-10-25)
+
+
+### Features
+
+* auto-control lights from Loxone commands ([#23](https://github.com/smarthome-wroclaw/esphome-loxone/issues/23)) ([fbd2887](https://github.com/smarthome-wroclaw/esphome-loxone/commit/fbd28873e4204d196c6008b7a855e6061ea6f4a8))
+* auto-send light brightness to Loxone ([#21](https://github.com/smarthome-wroclaw/esphome-loxone/issues/21)) ([b0cff28](https://github.com/smarthome-wroclaw/esphome-loxone/commit/b0cff285b10e517ce4ffce01e21c29e03a71342c))
+
 ## [1.8.0](https://github.com/smarthome-wroclaw/esphome-loxone/compare/v1.7.0...v1.8.0) (2026-10-25)
 
 
